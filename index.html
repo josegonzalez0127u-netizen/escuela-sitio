@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a1f14">
+<title>Mi Escuela - Sitio Escolar</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{--bg:#f5f7f3;--card:#fff;--fg:#1a2e1c;--muted:#5a7a64;--accent:#00a65a;--border:#dde5dd;--radius:14px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--fg);min-height:100vh}
+header{background:linear-gradient(135deg,#0a1f14,#0e2a1b);color:#e8f5ec;padding:20px;position:sticky;top:0;z-index:50;box-shadow:0 2px 12px rgba(0,0,0,0.15)}
+.header-inner{max-width:800px;margin:0 auto;display:flex;align-items:center;justify-content:space-between}
+.header-inner h1{font-family:'Playfair Display',serif;font-size:22px;font-weight:800}
+.header-inner h1 span{color:#00e68a}
+nav{max-width:800px;margin:0 auto;overflow-x:auto;display:flex;gap:6px;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border);-webkit-overflow-scrolling:touch;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:.2s}
+nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+nav button:hover:not(.active){border-color:var(--accent);color:var(--accent)}
+.content{max-width:800px;margin:0 auto;padding:20px 16px}
+.page-title{font-family:'Playfair Display',serif;font-size:28px;font-weight:800;margin-bottom:20px;color:var(--fg)}
+.post{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.post-img{width:100%;max-height:300px;object-fit:cover;display:block}
+.post-body{padding:16px}
+.post-badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);background:rgba(0,166,90,0.08);padding:3px 10px;border-radius:20px;margin-bottom:8px}
+.post h3{font-size:17px;font-weight:700;margin-bottom:6px;line-height:1.3}
+.post p{font-size:14px;color:var(--muted);line-height:1.6}
+.post-date{font-size:11px;color:#999;margin-top:10px}
+.post-link{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 16px;background:#f0f5f2;border-radius:8px;text-decoration:none;color:var(--accent);font-size:13px;font-weight:600}
+.post1:13px;font-weight:600}
+.post-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:10px}
+.post-gallery img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px}
+.empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:15px}
+.loading{text-align:center;padding:60px 20px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header><div class="header-inner"><h1>Mi <span>Escuela</span></h1></div></header>
+<nav id="nav"></nav>
+<div class="content">
+  <h2 class="page-title" id="pageTitle"></h2>
+  <div id="posts"></div>
+</div>
+<script>
+var API='https://escuela-push-api.vercel.app';
+var pages=[
+  {id:'inicio',name:'Inicio',icon:'fa-home'},
+  {id:'nuestra-escuela',name:'Nuestra Escuela',icon:'fa-school'},
+  {id:'personal-docente',name:'Personal Docente',icon:'fa-chalkboard-teacher'},
+  {id:'avisos',name:'Avisos',icon:'fa-bullhorn'},
+  {id:'actividades-artisticas',name:'Actividades Artisticas',icon:'fa-palette'},
+  {id:'valores',name:'Valores',icon:'fa-star'}
+];
+var currentPage='inicio';
+
+function renderNav(){
+  document.getElementById('nav').innerHTML=pages.map(p=>
+    '<button class="'+(currentPage===p.id?'active':'')+'" onclick="goPage(\''+p.id+'\')"><i class="fas '+p.icon+'"></i> '+p.name+'</button>'
+  ).join('');
+}
+
+function goPage(id){
+  currentPage=id;
+  renderNav();
+  loadPosts();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function loadPosts(){
+  var title=pages.find(p=>p.id===currentPage);
+  document.getElementById('pageTitle').textContent=title?title.name:'';
+  document.getElementById('posts').innerHTML='<div class="loading">Cargando...</div>';
+
+  fetch(API+'/api/posts?publicOnly=true&pageId='+currentPage)
+    .then(r=>r.json())
+    .then(data=>{
+      if(!data.success||!data.posts||data.posts.length===0){
+        document.getElementById('posts').innerHTML='<div class="empty">No hay publicaciones en esta seccion.</div>';
+        return;
+      }
+      document.getElementById('posts').innerHTML=data.posts.map(renderPost).join('');
+    })
+    .catch(()=>{
+      document.getElementById('posts').innerHTML='<div class="empty">Error al cargar.</div>';
+    });
+}
+
+function renderPost(p){
+  var img='';
+  if(p.fotos&&p.fotos.length>0){
+    img='<img class="post-img" src="'+p.fotos[0]+'" alt="">';
+  }
+  var gallery='';
+  if(p.fotos&&p.fotos.length>1){
+    gallery='<div class="post-gallery">'+p.fotos.slice(1).map(f=>'<img src="'+f+'" alt="">').join('')+'</div>';
+  }
+  var links='';
+  if(p.url){
+    var d='';try{d=new URL(p.url).hostname;}catch(e){d=p.url;}
+    links+='<a class="post-link" href="'+p.url+'" target="_blank"><i class="fas fa-external-link-alt"></i> '+d+'</a>';
+  }
+  if(p.videos&&p.videos.length>0){
+    p.videos.forEach(v=>{
+      var yt=getYt(v);
+      if(yt) links+='<a class="post-link" href="'+v+'" target="_blank"><i class="fab fa-youtube"></i> Ver video</a>';
+      else links+='<a class="post-link" href="'+v+'" target="_blank"><i class="fas fa-video"></i> Ver video</a>';
+    });
+  }
+  if(p.pdfs&&p.pdfs.length>0){
+    p.pdfs.forEach((d,i)=>{
+      links+='<a class="post-link" href="'+d+'" target="_blank"><i class="fas fa-file-pdf"></i> Documento '+(i+1)+'</a>';
+    });
+  }
+  var date=new Date(p.fechaCreacion).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});
+  return '<article class="post">'+img+
+    '<div class="post-body">'+
+      '<span class="post-badge">'+(p.paginaId||'General')+'</span>'+
+      '<h3>'+esc(p.titulo)+'</h3>'+
+      (p.descripcion?'<p>'+esc(p.descripcion)+'</p>':'')+
+      gallery+links+
+      '<div class="post-date">'+date+'</div>'+
+    '</div></article>';
+}
+
+function getYt(u){if(!u)return null;var m=u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);return m?m[1]:null;}
+function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+
+renderNav();
+loadPosts();
+</script>
+</body>
+</html>
